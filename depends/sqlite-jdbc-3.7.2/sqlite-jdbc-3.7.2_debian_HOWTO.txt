@@ -1,0 +1,13 @@
+========================================
+=== SQLITE JDBC Debian package howto ===
+========================================
+
+In order to build a Debian package for clean installation of sqlite-jdbc-3.7.2.jar,
+run the following command:
+
+  $  dpkg-buildpackage -rfakeroot
+
+    or, if you need to force the build:
+
+  $  dpkg-buildpackage -rfakeroot -d
+
