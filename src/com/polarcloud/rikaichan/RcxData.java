@@ -38,11 +38,12 @@ package com.polarcloud.rikaichan;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -65,6 +66,9 @@ import java.util.Set;
 public class RcxData {
 
     private static boolean DEBUG = false;
+
+	private static String rikaichanJar = "depends/rikaichan.jar";
+	private static String pathToRikaichanResources = ":resource:jar:file:"+rikaichanJar+"!/resources";
     
     static {
         // load the sqlite-JDBC driver using the current class loader
@@ -250,12 +254,12 @@ public class RcxData {
                 inputStream = fileInputStream;
             } else {
             	System.err.println("NOT FOUND: resources/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
-                final InputStream resInputStream = RcxData.class.getResourceAsStream("/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                final InputStream resInputStream = RcxData.class.getResourceAsStream("/resources/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
                 inputStream = resInputStream;
                 if (resInputStream == null) {
-                	System.err.println("not found either: /com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                	System.err.println("not found either: <JAR_FILE>/resources/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
                 } else {
-                	System.err.println("but found Ok: /com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                	System.err.println("but found Ok: <JAR_FILE>/resources/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
                 }
             }
         }
@@ -756,6 +760,27 @@ public class RcxData {
         }
     }
 
+    public static class KanjiEntry {
+        private String kanji;
+        private String codes;
+        private String onkun;
+        private String nanori;
+        private String eigo;
+        
+    	public KanjiEntry(String a, String b, String c, String d, String e) {
+    		this.kanji = a;
+    		this.codes = b;
+    		this.onkun = c;
+    		this.nanori = d;
+    		this.eigo = e;
+    	}
+    	
+        public String toString() {
+            return "[ kanji = " + kanji + ", codes = " + codes + ", onkun = " + onkun + ", nanori = " + nanori + " eigo = " + eigo + " ]";
+        }
+
+    }
+    
     public static class DictionaryEntry {
         private String word;
         private String reading;
@@ -969,6 +994,66 @@ public class RcxData {
 //        return result;
 //    },
 //
+    public static KanjiEntry kanjiSearch(String kanji) throws IOException {
+    	
+        final InputStream inputStream;
+        {
+            InputStream fileInputStream = null;
+            try {
+                fileInputStream = new FileInputStream("resources/com/polarcloud/rikaichan/chrome/content/kanji.dat");
+            }
+            catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+//    		PrintStream errorFile = new PrintStream(new FileOutputStream("korenani_err2.txt"));
+//    		errorFile.append("- Korenani2 -\n");
+//    		System.setErr(errorFile);
+            if (fileInputStream != null) {
+            	System.err.println("FOUND Ok: resources/com/polarcloud/rikaichan/chrome/content/kanji.dat");
+                inputStream = fileInputStream;
+            } else {
+            	System.err.println("NOT FOUND: resources/com/polarcloud/rikaichan/chrome/content/kanji.dat");
+                final InputStream resInputStream = RcxData.class.getResourceAsStream("/resources/com/polarcloud/rikaichan/chrome/content/kanji.dat");
+                inputStream = resInputStream;
+                if (resInputStream == null) {
+                	System.err.println("not found either: <JAR_FILE>/resources/com/polarcloud/rikaichan/chrome/content/kanji.dat");
+                } else {
+                	System.err.println("but found Ok: <JAR_FILE>/resources/com/polarcloud/rikaichan/chrome/content/kanji.dat");
+                }
+            }
+        }
+        final BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, "UTF8"));
+        
+        try {
+            String line = br.readLine(); // discard first line of the file
+            for (;;) {
+                line = br.readLine();
+                if (line == null) {
+                    break;
+                }
+          	  if (kanji.equals(line.substring(0, 1))) {
+        		  String[] details = line.split("\\|");
+        		  return new KanjiEntry(kanji, details[1], details[2], details[3], details[5]);
+        	  }
+
+            }
+        } finally {
+            br.close();
+        }
+    	return new KanjiEntry(kanji, "-", "-", "-", "-");
+
+    	
+    	
+//    	List<String> lines=Files.readAllLines(Paths.get("resources/com/polarcloud/rikaichan/chrome/content/kanji.dat"), Charset.forName("UTF-8"));
+//    	for(String line:lines){
+//    	  if (kanji.equals(line.substring(0, 1))) {
+//    		  String[] details = line.split("\\|");
+//    		  return new KanjiEntry(kanji, details[1], details[2], details[3], details[5]);
+//    	  }
+//    	}    	
+//    	return new KanjiEntry(kanji, "-", "-", "-", "-");
+    }
+    
 //    // ---
 //
 //    numList: [

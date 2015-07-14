@@ -72,7 +72,6 @@ public class AppFrame extends JFrame {
 		}
 		
 		textPane = new JTextPane();
-		textPane.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
 		textPane.setCaretPosition(0);
 		textPane.setMargin(new Insets(5,5,5,5));
 		StyledDocument styledDoc = textPane.getStyledDocument();
@@ -133,7 +132,7 @@ public class AppFrame extends JFrame {
 //	private static String pathToDictionary = ":resource:jar:file:korenani-dict-en-2-01-140601.jar!/dictionaries/rikaichan-en-2-01-140601/dict.sqlite";
 //	private static String pathToDictionary = ":resource:jar:file:default_jp_2_en_dict.jar!/rikaichan-en-2-01-140601/dict.sqlite";
 	private static String dictionaryJar = "dictionaries/default_jp_2_en_dict.jar";
-	private static String pathToDictionary = ":resource:jar:file:"+dictionaryJar+"!/rikaichan-en-2-01-140601/dict.sqlite";
+	private static String pathToDictionary = ":resource:jar:file:"+dictionaryJar+"!/dict.sqlite";
 
 	protected class CaretListenerLabel extends JLabel
 	implements CaretListener {
@@ -186,10 +185,18 @@ public class AppFrame extends JFrame {
 					System.out.println("  word = "+word);
 					//                      String word = text.substring(i, Math.min(i + 15, text.length()));
 					RcxData.DictionaryEntry[] dicoEntries = new RcxData.DictionaryEntry[0];
+					RcxData.KanjiEntry kanjiEntry = new RcxData.KanjiEntry("-", "-", "-", "-", "-");
 					try {
+						if (word.length() > 0) {
+							kanjiEntry = RcxData.kanjiSearch(word.substring(0, 1));
+						}
+						System.out.println("kanjiSearch result : " + kanjiEntry);
 						dicoEntries = RcxData._wordSearch(word, pathToDictionary, 10);
 						//							System.out.println("=> found "+dicoEntries.length+" dictionary entries");
 					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}

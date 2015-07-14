@@ -22,9 +22,10 @@ public class Main {
 	 */
 	public static void main(String[] args) throws FileNotFoundException {
 		
-//		PrintStream errorFile = new PrintStream(new FileOutputStream("korenani_err.txt"));
-//		errorFile.append("- Korenani -\n");
-//		System.setErr(errorFile);
+		PrintStream errorFile = new PrintStream(new FileOutputStream("korenani_err.txt"));
+		errorFile.append("- Korenani -\n");
+		System.setOut(errorFile);
+		System.setErr(errorFile);
 		
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
