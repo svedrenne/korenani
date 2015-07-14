@@ -36,44 +36,43 @@
  */
 package com.polarcloud.rikaichan;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 /*
  * Below are the contents of the JavaScript file 'data.js' (from Rikaichan 2.07)
- * that Sylvain Vedrenne is going to port to Java for project Korenani.
+ * that Sylvain Vedrenne is porting to Java for project Korenani.
  */
-
-/*
-
-    Rikaichan
-    Copyright (C) 2005-2012 Jonathan Zarate
-    http://www.polarcloud.com/
-
-    ---
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    ---
-
-    Please do not change or remove any of the copyrights or links to web pages
-    when modifying any of the files.
-
-*/
 
 //var rcxData = {
 //    ready: false,
 //    kanjiPos: 0,
 //    dicList: [],
+public class RcxData01 {
+
+    private static boolean DEBUG = false;
+    
+    static {
+        // load the sqlite-JDBC driver using the current class loader
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
 //
 //    loadConfig: function() {
 //        let reinit = false;
@@ -226,32 +225,75 @@ package com.polarcloud.rikaichan;
 //
 //    deinflect: {
 //        init: function() {
+    public static void deinflectInit() {
 //            this.reasons = [];
 //            this.rules = [];
 //
 //            var buffer = rcxFile.readArray('chrome://rikaichan/content/deinflect.dat');
+        List<String> buffer = new ArrayList<String>(100);
+        try {
+            final BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("deinflect.dat"), "UTF8"));
+//            final BufferedReader br = new BufferedReader(new InputStreamReader(RcxData01.class.getResourceAsStream("/deinflect.dat"), "UTF8"));
+            try {
+                String line = br.readLine(); // discard first line of the file
+                for (;;) {
+                    line = br.readLine();
+                    if (line == null) {
+                        break;
+                    }
+                    buffer.add(line);
+                    // System.out.println("added new line = "+line);
+                }
+            } finally {
+                br.close();
+            }
+        } catch (IOException e) {
+            System.out.println("RcxData.deinflectInit() - caught exception " + e);
+        }
 //            var ruleGroup = [];
 //            ruleGroup.fromLen = -1;
+        RuleGroup ruleGroup = new RuleGroup(-1);
+        int ruleGroupFromLen = -1;
 //
 //            // i = 1: skip header
 //            for (var i = 1; i < buffer.length; ++i) {
+        for (String line : buffer) {
 //                var f = buffer[i].split('\t');
+            String[] f = line.split("\t");
 //
 //                if (f.length == 1) {
+            if (f.length == 1) {
 //                    this.reasons.push(f[0]);
+                reasons.add(f[0]);
+                // System.out.println("RcxData.deinflectInit() just added to reasons f[0] = "+f[0]);
+            }
 //                }
 //                else if (f.length == 4) {
+            else if (f.length == 4) {
 //                    var r = { from: f[0], to: f[1], type: f[2], reason: f[3] };
+                Rule r = new Rule(f[0], f[1], Integer.parseInt(f[2]), Integer.parseInt(f[3]));
 //                    if (ruleGroup.fromLen != r.from.length) {
 //                        ruleGroup = [];
 //                        ruleGroup.fromLen = r.from.length;
 //                        this.rules.push(ruleGroup);
 //                    }
 //                    ruleGroup.push(r);
+                if (ruleGroupFromLen != r.from.length()) {
+                    ruleGroup = new RuleGroup(r.from.length());
+                    ruleGroupFromLen = r.from.length();
+                    rules.add(ruleGroup);
+                    // System.out.println("RcxData.deinflectInit() just added to rules this group = "+ruleGroup);
+                }
+                ruleGroup.add(r);
+                // System.out.println("RcxData.deinflectInit() just added this rule r = "+r);
+                // System.out.println("RcxData.deinflectInit() current group = "+ruleGroup);
 //                }
+            }
 //            }
+        }
 //            this.ready = true;
 //        },
+    }
 //
 //        done: function() {
 //            this.reasons = null;
@@ -259,48 +301,147 @@ package com.polarcloud.rikaichan;
 //            this.ready = false;
 //        },
 //
-//        go: function(word) {
+
+    static class Rule {
+        int type;
+        String to;
+        String from;
+        int reason;
+
+        Rule(String from, String to, int type, int reason) {
+            this.from = from;
+            this.to = to;
+            this.type = type;
+            this.reason = reason;
+        }
+
+        public String toString() {
+            return "from = " + from + ", to = " + to + ", type = " + type + ", reason = " + reason;
+        }
+    }
+
+    static class RuleGroup {
+        private int fromLen;
+        List<Rule> rules = new ArrayList<Rule>();
+
+        public int size() {
+            return rules.size();
+        }
+
+        public void add(Rule rule) {
+            rules.add(rule);
+        }
+
+        public Rule get(int k) {
+            return rules.get(k);
+        }
+
+        RuleGroup(int fromLen) {
+            this.fromLen = fromLen;
+        }
+
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            for (Rule rule : rules) {
+                sb.append(rule).append(", ");
+            }
+            return sb.toString();
+        }
+    }
+
+    private static List<String> reasons = new ArrayList<String>();
+    private static List<RuleGroup> rules = new ArrayList<RuleGroup>();
+
+//        go: function(word) { // deinflect.go(word)
+    private static Variant[] deinflect(String word) {
 //            if (!this.ready) this.init();
 //
 //            var have = [];
 //            have[word] = 0;
+        Set<String> previousWords = new HashSet<String>();
 //
 //            var r = [{ word: word, type: 0xFF, reason: '' }];
+        List<Variant> r = new ArrayList<Variant>();
+        r.add(new Variant(word, 0xFF, ""));
+
+        previousWords.add(word);
+
 //            var i = 0;
+        int i = 0;
 //            do {
+        do {
 //                word = r[i].word;
+            word = r.get(i).word;
 //                var wordLen = word.length;
+            int wordLen = word.length();
 //                var type = r[i].type;
+            int type = r.get(i).type;
 //
 //                for (var j = 0; j < this.rules.length; ++j) {
+            for (int j = 0; j < rules.size(); ++j) {
 //                    var ruleGroup = this.rules[j];
+                RuleGroup ruleGroup = rules.get(j);
 //                    if (ruleGroup.fromLen <= wordLen) {
+                if (ruleGroup.fromLen <= wordLen) {
 //                        var end = word.substr(-ruleGroup.fromLen);
+                    String end = word.substring(word.length() - ruleGroup.fromLen);
 //                        for (var k = 0; k < ruleGroup.length; ++k) {
+                    for (int k = 0; k < ruleGroup.size(); k++) {
 //                            var rule = ruleGroup[k];
+                        Rule rule = ruleGroup.get(k);
 //                            if ((type & rule.type) && (end == rule.from)) {
+                        if ((type & rule.type) > 0 && end.equals(rule.from)) {
 //                                var newWord = word.substr(0, word.length - rule.from.length) + rule.to;
+                            String newWord = word.substring(0, word.length() - rule.from.length()) + rule.to;
 //                                if (newWord.length <= 1) continue;
+                            if (newWord.length() <= 1)
+                                continue;
+
 //                                var o = {};
+                            /*
+                             * N.B: I don't understand the if() below. Seems to me this if() does nothing
+                             * except 'continue'.
+                             */
 //                                if (have[newWord] != undefined) {
+                            if (previousWords.contains(newWord)) {
 //                                    o = r[have[newWord]];
 //                                    o.type |= (rule.type >> 8);
 //                                    continue;
+                                continue;
 //                                }
+                            }
 //                                have[newWord] = r.length;
+                            previousWords.add(newWord);
+                            final String variantReason;
 //                                if (r[i].reason.length) o.reason = this.reasons[rule.reason] + ' &lt; ' + r[i].reason;
+                            if (r.get(i).reason.length() > 0) {
+                                variantReason = reasons.get(rule.reason) + " < " + r.get(i).reason;
+                            }
 //                                    else o.reason = this.reasons[rule.reason];
+                            else {
+                                variantReason = reasons.get(rule.reason);
+                            }
 //                                o.type = rule.type >> 8;
 //                                o.word = newWord;
+                            Variant o = new Variant(newWord, rule.type >> 8, variantReason);
 //                                r.push(o);
+                            r.add(o);
+                            // System.out.println("RcxData.deinflect() r.length = "+r.size());
 //                            }
+                        }
 //                        }
+                    }
 //                    }
+                }
 //                }
+            }
 //            } while (++i < r.length);
+        } while (++i < r.size());
 //
 //            return r;
+        return r.toArray(new Variant[r.size()]);
 //        }
+    }
 //    },
 //
 //
@@ -309,65 +450,120 @@ package com.polarcloud.rikaichan;
 //        0x3048,0x304A,0x304B,0x304D,0x304F,0x3051,0x3053,0x3055,0x3057,0x3059,0x305B,0x305D,0x305F,0x3061,
 //        0x3064,0x3066,0x3068,0x306A,0x306B,0x306C,0x306D,0x306E,0x306F,0x3072,0x3075,0x3078,0x307B,0x307E,
 //        0x307F,0x3080,0x3081,0x3082,0x3084,0x3086,0x3088,0x3089,0x308A,0x308B,0x308C,0x308D,0x308F,0x3093],
+    public final static char[] ch = new char[] { '\u3092','\u3041','\u3043','\u3045','\u3047','\u3049','\u3083','\u3085','\u3087','\u3063','\u30FC','\u3042','\u3044','\u3046',
+        '\u3048','\u304A','\u304B','\u304D','\u304F','\u3051','\u3053','\u3055','\u3057','\u3059','\u305B','\u305D','\u305F','\u3061',
+        '\u3064','\u3066','\u3068','\u306A','\u306B','\u306C','\u306D','\u306E','\u306F','\u3072','\u3075','\u3078','\u307B','\u307E',
+        '\u307F','\u3080','\u3081','\u3082','\u3084','\u3086','\u3088','\u3089','\u308A','\u308B','\u308C','\u308D','\u308F','\u3093' };
 //    cv:[0x30F4,0xFF74,0xFF75,0x304C,0x304E,0x3050,0x3052,0x3054,0x3056,0x3058,0x305A,0x305C,0x305E,0x3060,
 //        0x3062,0x3065,0x3067,0x3069,0xFF85,0xFF86,0xFF87,0xFF88,0xFF89,0x3070,0x3073,0x3076,0x3079,0x307C],
+    public final static char[] cv = new char[] { '\u30F4','\uFF74','\uFF75','\u304C','\u304E','\u3050','\u3052','\u3054','\u3056','\u3058','\u305A','\u305C','\u305E','\u3060',
+        '\u3062','\u3065','\u3067','\u3069','\uFF85','\uFF86','\uFF87','\uFF88','\uFF89','\u3070','\u3073','\u3076','\u3079','\u307C' };
 //    cs:[0x3071,0x3074,0x3077,0x307A,0x307D],
-//
+    public final static char[] cs = new char[] { '\u3071','\u3074','\u3077','\u307A','\u307D' };
+
+// ## called by wordSearch(word, noKanji), and by translate(text)
 //    _wordSearch: function(word, dic, max) {
+    public static DictionaryEntry[] _wordSearch(String word, Dictionary dic, int max) throws SQLException {
+
+          if (word.length() == 0) {
+              return null;
+          }
+
 //        if (!this.ready) this.init();
 //
 //        // half & full-width katakana to hiragana conversion
 //        // note: katakana vu is never converted to hiragana
-//
+
 //        var trueLen = [0];
+          int[] trueLen = new int[word.length() + 1];
 //        var p = 0;
+          char p = 0;
 //        var r = '';
+          String r = "";
+          
 //        for (let i = 0; i < word.length; ++i) {
+          for (int i = 0; i < word.length(); ++i) {
 //            let u = word.charCodeAt(i);
+              char u = word.charAt(i);
 //            let v = u;
+              char v = u;
 //
 //            if (u <= 0x3000) break;
+              if (u <= 0x3000)
+                  break;
 //
 //            // full-width katakana to hiragana
 //            if ((u >= 0x30A1) && (u <= 0x30F3)) {
+              if ((u >= 0x30A1) && (u <= 0x30F3)) {
 //                u -= 0x60;
+                  u -= 0x60;
 //            }
+              }
 //            // half-width katakana to hiragana
 //            else if ((u >= 0xFF66) && (u <= 0xFF9D)) {
+              else if ((u >= 0xFF66) && (u <= 0xFF9D)) {
 //                u = this.ch[u - 0xFF66];
+                  u = ch[u - 0xFF66];
 //            }
+              }
 //            // voiced (used in half-width katakana) to hiragana
 //            else if (u == 0xFF9E) {
+              else if (u == 0xFF9E) {
 //                if ((p >= 0xFF73) && (p <= 0xFF8E)) {
+                  if ((p >= 0xFF73) && (p <= 0xFF8E)) {
 //                    r = r.substr(0, r.length - 1);
+                      r = r.substring(0, r.length() - 1);
 //                    u = this.cv[p - 0xFF73];
+                      u = cv[p - 0xFF73];
 //                }
+                  }
 //            }
+              }
 //            // semi-voiced (used in half-width katakana) to hiragana
 //            else if (u == 0xFF9F) {
+              else if (u == 0xFF9F) {
 //                if ((p >= 0xFF8A) && (p <= 0xFF8E)) {
+                  if ((p >= 0xFF8A) && (p <= 0xFF8E)) {
 //                    r = r.substr(0, r.length - 1);
+                      r = r.substring(0, r.length() - 1);
 //                    u = this.cs[p - 0xFF8A];
+                      u = cs[p - 0xFF8A];
 //                }
+                  }
 //            }
+              }
 //            // ignore J~
 //            else if (u == 0xFF5E) {
+              else if (u == 0xFF5E) {
 //                p = 0;
+                  p = 0;
 //                continue;
+                  continue;
 //            }
+              }
 //
 //            r += String.fromCharCode(u);
+              r += u;
 //            trueLen[r.length] = i + 1;  // need to keep real length because of the half-width semi/voiced conversion
+              trueLen[r.length()] = i + 1; // need to keep real length because of the half-width semi/voiced
 //            p = v;
+              p = v;
 //        }
+          }
 //        word = r;
+        word = r;
+        // System.out.println("RcxData._wordSearch() word (kata2hira-converted) = "+r);
+
 //
 //
 //        var result = { data: [] };
+        List<DictionaryEntry> result = new ArrayList<DictionaryEntry>();
 //        var maxTrim;
+        int maxTrim = 10;
 //
 //        if (dic.isName) {
 //            maxTrim = rcxConfig.namax;
+
 //            result.names = 1;
 //        }
 //        else {
@@ -379,39 +575,86 @@ package com.polarcloud.rikaichan;
 //
 //        var have = [];
 //        var count = 0;
+        int count = 0;
 //        var maxLen = 0;
 //
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:dict.sqlite");
+
 //        while (word.length > 0) {
+        while (word.length() > 0) {
 //            var showInf = (count != 0);
+            boolean showInf = (count != 0);
 //            var variants = dic.isName ? [{word: word, type: 0xFF, reason: null}] : this.deinflect.go(word);
+            final Variant[] variants;
+            if (false) {
+                // TODO? case of dic.isName()
+                variants = new Variant[] { new Variant(word, 0xFF, null) };
+            } else {
+                if (DEBUG) {
+                    System.out.println("RcxData._wordSearch() calling deinflect(" + word + ")");
+                }
+                variants = deinflect(word);
+                // System.out.println("RcxData._wordSearch() variants.length = "+variants.length);
+                if (DEBUG) {
+                    for (Variant var : variants) {
+                        System.out.println("RcxData._wordSearch() var = " + var);
+                    }
+                }
+            }
 //            for (var i = 0; i < variants.length; i++) {
 //                var v = variants[i];
+            for (int i = 0; i < variants.length; i++) {
+                Variant variant = variants[i];
 //                var entries = dic.findWord(v.word);
+                ResultSet rs = findWord(connection, variant.word);
 //                for (var j = 0; j < entries.length; ++j) {
+                while (rs.next()) {
 //                    var dentry = entries[j];
-//                    if (have[dentry]) continue;
+                    String dentry = rs.getString(3);
+//                    if (have[dentry]) continue;  <= ???????
 //
 //                    var ok = true;
+                    boolean ok = true;
 //                    if ((dic.hasType) && (i > 0)) {
 //                        // i > 0 a de-inflected word
-//
+                    if (i > 0) { // variants(i>0) is a deinflected word
+
 //                        var gloss = dentry.split(/[,()]/);
+                        String[] gloss = dentry.split("[,\\(\\)]");
 //                        var y = v.type;
+                        int y = variant.type;
 //                        var z;
+                        int z;
 //                        for (z = gloss.length - 1; z >= 0; --z) {
+                        for (z = gloss.length - 1; z >= 0; --z) {
 //                            var g = gloss[z];
+                            final String g = gloss[z];
 //                            if ((y & 1) && (g == 'v1')) break;
+                            if ((variant.type & 1) != 0 && ("v1".equals(g)))
+                                break;
 //                            if ((y & 4) && (g == 'adj-i')) break;
+                            if ((y & 4) != 0 && ("adj-i".equals(g)))
+                                break;
 //                            if ((y & 2) && (g.substr(0, 2) == 'v5')) break;
+                            if ((y & 2) != 0 && ("v5".equals(g.substring(0, Math.min(2, g.length())))))
+                                break;
 //                            if ((y & 16) && (g.substr(0, 3) == 'vs-')) break;
+                            if ((y & 16) != 0 && ("vs-".equals(g.substring(0, Math.min(3, g.length())))))
+                                break;
 //                            if ((y & 8) && (g == 'vk')) break;
+                            if ((y & 8) != 0 && ("vk".equals(g)))
+                                break;
 //                        }
+                        }
 //                        ok = (z != -1);
+                        ok = (z != -1);
 //                    }
+                    }
 //                    if ((ok) && (dic.hasType) && (rcxConfig.hidex)) {
 //                        if (dentry.match(/\/\([^\)]*\bX\b.*?\)/)) ok = false;
 //                    }
 //                    if (ok) {
+                    if (ok) {
 //                        if (count >= maxTrim) {
 //                            result.more = 1;
 //                            break;
@@ -422,25 +665,94 @@ package com.polarcloud.rikaichan;
 //                        if (maxLen == 0) maxLen = trueLen[word.length];
 //
 //                        var r = null;
+                        String r2 = "";
 //                        if (v.reason) {
+                        if (variant.reason != "") {
 //                            if (showInf) r = '&lt; ' + v.reason + ' &lt; ' + word;
+                            if (showInf) {
+                                r2 = "<" + variant.reason + "<" + word;
+                            }
 //                                else r = '&lt; ' + v.reason;
+                            else {
+                                r2 = "<" + variant.reason;
+                            }
 //                        }
+                        }
 //                        result.data.push([dentry, r]);
+                        result.add(new DictionaryEntry(rs.getString(1), rs.getString(2), rs.getString(3), r2));
 //                    }
+                    }
 //                }   // for j < entries.length
+                } // while (rs.next()) {
 //                if (count >= maxTrim) break;
 //            }   // for i < variants.length
+            } // for variant
 //            if (count >= maxTrim) break;
 //            word = word.substr(0, word.length - 1);
+            word = word.substring(0, word.length() - 1);
 //        }   // while word.length > 0
+        } // while word.length > 0
+
+        try {
+            if (connection != null)
+                connection.close();
+        } catch (SQLException e) {
+            // connection close failed.
+            System.err.println(e);
+        }
+
 //
 //        if (result.data.length == 0) return null;
 //
 //        result.matchLen = maxLen;
 //        return result;
 //    },
-//
+        DictionaryEntry[] arrayResult = result.toArray(new DictionaryEntry[result.size()]);
+        return arrayResult;
+
+    }
+
+    //
+    static class Variant {
+        private final String word;
+        private final int type;
+        final String reason;
+
+        public Variant(String word, int type, String reason) {
+            this.word = word;
+            this.type = type;
+            this.reason = reason;
+        }
+
+        public String toString() {
+            return " " + word + ", type = " + type + ", reason = " + reason;
+        }
+    }
+
+    public static class DictionaryEntry {
+        private String word;
+        private String reading;
+        private String gloss;
+        private String reason;
+
+        DictionaryEntry(String a, String b, String c, String reason) {
+            this.word = a;
+            this.reading = b;
+            this.gloss = c;
+            this.reason = reason;
+        }
+
+        public String toString() {
+            return "[" + word + ", " + reading + ", " + gloss + ", " + reason + ", " + "]";
+        }
+    }
+
+    // ////////////////////////////////////////////
+    //
+    // RcxMain.lookupSearch() ===> wordSearch()
+    // RcxMain.show() ===> wordSearch()
+    // ////////////////////////////////////////////
+
 //    wordSearch: function(word, noKanji) {
 //        this.searchSkipped = 0;
 //        let ds = this.selected;
@@ -491,7 +803,8 @@ package com.polarcloud.rikaichan;
 //        result.textLen -= text.length;
 //        return result;
 //    },
-//
+
+      // RcxMain.lookupSearch() ====> textSearch()
 //    textSearch: function(text) {
 //        this.searchSkipped = 0;
 //        if (!this.ready) this.init();
@@ -566,6 +879,9 @@ package com.polarcloud.rikaichan;
 //        return null;
 //    },
 //
+  // RcxMain.lookupSearch() =============================> kanjiSearch()
+  // RcxMain.lookupSearch() ===> RcxData.wordSearch() ===> kanjiSearch()
+  // RcxMain.show() ===> RcxData.wordSearch() ===> kanjiSearch()
 //    // @@@ todo later...
 //    kanjiSearch: function(kanji) {
 //        const hex = '0123456789ABCDEF';
@@ -1083,13 +1399,26 @@ package com.polarcloud.rikaichan;
 //    };
 //
 //    this.findWord = function(word) {
+    private static ResultSet findWord(Connection connection, String word) {
+        ResultSet rs = null;
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30); // set timeout to 30 sec.
+
 //        return this.find('SELECT * FROM dict WHERE kanji=?1 OR kana=?1 LIMIT 100', word);
-//    };
-//
+            rs = statement.executeQuery(" SELECT * FROM dict WHERE kanji = '" + word + "' OR kana = '" + word
+                    + "' LIMIT 100");
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
+        return rs;
+    }
+
 //    this.findText = function(text) {
 //        return this.find('SELECT * FROM dict WHERE entry LIKE ?1 LIMIT 300', '%' + text + '%');
 //    };
 //
 //    return this;
 //};
+}
 
