@@ -6,40 +6,36 @@
 
     <target name="compile">
         <mkdir dir="build/classes"/>
-        <javac srcdir="src" destdir="build/classes"/>
+        <javac srcdir="src" destdir="build/classes" encoding="utf-8" />
     </target>
 
     <target name="jar">
         <mkdir dir="build/jar"/>
         <jar destfile="build/jar/korenani.jar" basedir="build/classes">
             <manifest>
-                <attribute name="Main-Class" value="net.jankenpoi.korenani.Korenani"/>
+                <attribute name="Main-Class" value="net.jankenpoi.korenani.Main"/>
+            	<attribute name="Class-Path" value="dictionaries/default_jp_2_en_dict.jar depends/sqlite-jdbc-3.7.2.jar depends/rikaichan.jar"/>
             </manifest>
-           <fileset dir="${basedir}">
-                <include name="resources/**"/>
-           </fileset>
-
         </jar>
 
-       <jar destfile="build/jar/korenani-dict-en-2-01-140601.jar">
-           <fileset dir="${basedir}">
-                <include name="dictionaries/rikaichan-en-2-01-140601/dict.sqlite"/>
-                <include name="dictionaries/rikaichan-en-2-01-140601/dict-copyright.txt"/>
+       <jar destfile="build/jar/dictionaries/default_jp_2_en_dict.jar">
+           <fileset dir="${basedir}/dictionaries">
+                <include name="dict.sqlite"/>
+                <include name="dict-copyright.txt"/>
             </fileset>
         </jar>
 
-    </target>
-    <target name="-post-jar">
-        <echo>Adding files to jar...</echo>
-        <jar destfile="build/korenani.jar" update="true">
+        <jar destfile="build/jar/depends/rikaichan.jar">
             <fileset dir="${basedir}">
-                <include name="resources/*"/>
+                 <include name="resources/**"/>
             </fileset>
-        </jar>
+         </jar>
+    	
+        <copy file="depends/sqlite-jdbc-3.7.2/sqlite-jdbc-3.7.2.jar" tofile="build/jar/depends/sqlite-jdbc-3.7.2.jar"/>
     </target>
-
+    	
     <target name="run">
-        <java jar="build/jar/korenani.jar" fork="true"/>
+        <java jar="build/jar/korenani.jar" fork="true" dir="build/jar"/>
     </target>
 
 </project>
