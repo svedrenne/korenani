@@ -1,0 +1,46 @@
+<project>
+
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="build/classes"/>
+        <javac srcdir="src" destdir="build/classes"/>
+    </target>
+
+    <target name="jar">
+        <mkdir dir="build/jar"/>
+        <jar destfile="build/jar/korenani.jar" basedir="build/classes">
+            <manifest>
+                <attribute name="Main-Class" value="net.jankenpoi.korenani.Korenani"/>
+            </manifest>
+           <fileset dir="${basedir}">
+                <include name="resources/**"/>
+           </fileset>
+
+        </jar>
+
+       <jar destfile="build/jar/korenani-dict-en-2-01-140601.jar">
+           <fileset dir="${basedir}">
+                <include name="dictionaries/rikaichan-en-2-01-140601/dict.sqlite"/>
+                <include name="dictionaries/rikaichan-en-2-01-140601/dict-copyright.txt"/>
+            </fileset>
+        </jar>
+
+    </target>
+    <target name="-post-jar">
+        <echo>Adding files to jar...</echo>
+        <jar destfile="build/korenani.jar" update="true">
+            <fileset dir="${basedir}">
+                <include name="resources/*"/>
+            </fileset>
+        </jar>
+    </target>
+
+    <target name="run">
+        <java jar="build/jar/korenani.jar" fork="true"/>
+    </target>
+
+</project>
+
