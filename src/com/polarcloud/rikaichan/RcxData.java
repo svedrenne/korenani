@@ -38,15 +38,17 @@ package com.polarcloud.rikaichan;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Dictionary;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -60,7 +62,7 @@ import java.util.Set;
 //    ready: false,
 //    kanjiPos: 0,
 //    dicList: [],
-public class RcxData01 {
+public class RcxData {
 
     private static boolean DEBUG = false;
     
@@ -69,7 +71,6 @@ public class RcxData01 {
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -225,15 +226,41 @@ public class RcxData01 {
 //
 //    deinflect: {
 //        init: function() {
-    public static void deinflectInit() {
+    public static void deinflectInit() throws IOException {
 //            this.reasons = [];
 //            this.rules = [];
 //
 //            var buffer = rcxFile.readArray('chrome://rikaichan/content/deinflect.dat');
         List<String> buffer = new ArrayList<String>(100);
-        try {
-            final BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("deinflect.dat"), "UTF8"));
-//            final BufferedReader br = new BufferedReader(new InputStreamReader(RcxData01.class.getResourceAsStream("/deinflect.dat"), "UTF8"));
+//        try {
+        final InputStream inputStream;
+        {
+            InputStream fileInputStream = null;
+            try {
+                fileInputStream = new FileInputStream("resources/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+            }
+            catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+//    		PrintStream errorFile = new PrintStream(new FileOutputStream("korenani_err2.txt"));
+//    		errorFile.append("- Korenani2 -\n");
+//    		System.setErr(errorFile);
+            if (fileInputStream != null) {
+            	System.err.println("FOUND Ok: resources/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                inputStream = fileInputStream;
+            } else {
+            	System.err.println("NOT FOUND: resources/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                final InputStream resInputStream = RcxData.class.getResourceAsStream("/com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                inputStream = resInputStream;
+                if (resInputStream == null) {
+                	System.err.println("not found either: /com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                } else {
+                	System.err.println("but found Ok: /com/polarcloud/rikaichan/chrome/content/deinflect.dat");
+                }
+            }
+        }
+        final BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, "UTF8"));
+            
             try {
                 String line = br.readLine(); // discard first line of the file
                 for (;;) {
@@ -247,9 +274,9 @@ public class RcxData01 {
             } finally {
                 br.close();
             }
-        } catch (IOException e) {
-            System.out.println("RcxData.deinflectInit() - caught exception " + e);
-        }
+//        } catch (IOException e) {
+//            System.out.println("RcxData.deinflectInit() - caught exception " + e);
+//        }
 //            var ruleGroup = [];
 //            ruleGroup.fromLen = -1;
         RuleGroup ruleGroup = new RuleGroup(-1);
@@ -463,10 +490,10 @@ public class RcxData01 {
 
 // ## called by wordSearch(word, noKanji), and by translate(text)
 //    _wordSearch: function(word, dic, max) {
-    public static DictionaryEntry[] _wordSearch(String word, Dictionary dic, int max) throws SQLException {
+    public static DictionaryEntry[] _wordSearch(String word, String dictionaryPath, int max) throws SQLException {
 
           if (word.length() == 0) {
-              return null;
+              return new DictionaryEntry[0];
           }
 
 //        if (!this.ready) this.init();
@@ -578,7 +605,7 @@ public class RcxData01 {
         int count = 0;
 //        var maxLen = 0;
 //
-        Connection connection = DriverManager.getConnection("jdbc:sqlite:dict.sqlite");
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:"+dictionaryPath);
 
 //        while (word.length > 0) {
         while (word.length() > 0) {
@@ -743,8 +770,25 @@ public class RcxData01 {
         }
 
         public String toString() {
-            return "[" + word + ", " + reading + ", " + gloss + ", " + reason + ", " + "]";
+            return "[ word = " + word + ", reading = " + reading + ", gloss = " + gloss + ", reason = " + reason + " ]";
         }
+        
+        public String word() {
+        	return word == null?"":word;
+        }
+
+        public String reading() {
+        	return reading == null?"":reading;
+        }
+
+        public String gloss() {
+        	return gloss == null?"":gloss;
+        }
+
+        public String reason() {
+        	return reason == null?"":reason;
+        }
+
     }
 
     // ////////////////////////////////////////////
