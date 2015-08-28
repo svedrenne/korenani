@@ -13,11 +13,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.HashMap;
 
@@ -66,8 +62,7 @@ public class AppFrame extends JFrame {
 	public AppFrame() {
 		super("Korenani 0.1");
 
-		Path path = Paths.get(dictionaryJar);
-		if (! Files.exists(path)) {
+		if (null == AppConfig.INSTANCE.getDictionary()) {
 			throw new RuntimeException("Dictionary not found!");
 		}
 		
@@ -131,8 +126,6 @@ public class AppFrame extends JFrame {
 	//TODO: extract this path to make it customizable
 //	private static String pathToDictionary = ":resource:jar:file:korenani-dict-en-2-01-140601.jar!/dictionaries/rikaichan-en-2-01-140601/dict.sqlite";
 //	private static String pathToDictionary = ":resource:jar:file:default_jp_2_en_dict.jar!/rikaichan-en-2-01-140601/dict.sqlite";
-	private static String dictionaryJar = "dictionaries/default_jp_2_en_dict.jar";
-	private static String pathToDictionary = ":resource:jar:file:"+dictionaryJar+"!/dict.sqlite";
 
 	protected class CaretListenerLabel extends JLabel
 	implements CaretListener {
@@ -191,7 +184,7 @@ public class AppFrame extends JFrame {
 							kanjiEntry = RcxData.kanjiSearch(word.substring(0, 1));
 						}
 						System.out.println("kanjiSearch result : " + kanjiEntry);
-						dicoEntries = RcxData._wordSearch(word, pathToDictionary, 10);
+						dicoEntries = RcxData._wordSearch(word, AppConfig.INSTANCE.getDictionary(), 10);
 						//							System.out.println("=> found "+dicoEntries.length+" dictionary entries");
 					} catch (SQLException e) {
 						// TODO Auto-generated catch block

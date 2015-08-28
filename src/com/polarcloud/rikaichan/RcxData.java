@@ -41,9 +41,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -66,9 +63,6 @@ import java.util.Set;
 public class RcxData {
 
     private static boolean DEBUG = false;
-
-	private static String rikaichanJar = "depends/rikaichan.jar";
-	private static String pathToRikaichanResources = ":resource:jar:file:"+rikaichanJar+"!/resources";
     
     static {
         // load the sqlite-JDBC driver using the current class loader
@@ -592,8 +586,7 @@ public class RcxData {
 //        var maxTrim;
         int maxTrim = 10;
 //
-//        if (dic.isName) {
-//            maxTrim = rcxConfig.namax;
+//        if (dic.isName) {//            maxTrim = rcxConfig.namax;
 
 //            result.names = 1;
 //        }
@@ -1550,4 +1543,3 @@ public class RcxData {
 //    return this;
 //};
 }
-
