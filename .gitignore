@@ -1,0 +1,4 @@
+build/**
+/bin/
+
+korenani_err.txt
