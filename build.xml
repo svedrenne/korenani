@@ -6,16 +6,19 @@
 
     <target name="compile">
         <mkdir dir="build/classes"/>
-        <javac srcdir="src" destdir="build/classes" encoding="utf-8" />
+        <javac target="1.6" source="1.6" srcdir="src" destdir="build/classes" encoding="utf-8" />
     </target>
 
     <target name="jar">
         <mkdir dir="build/jar"/>
         <jar destfile="build/jar/korenani.jar" basedir="build/classes">
             <manifest>
-                <attribute name="Main-Class" value="net.jankenpoi.korenani.Main"/>
+                <attribute name="Main-Class" value="jp.osdn.korenani.Main"/>
             	<attribute name="Class-Path" value="dictionaries/default_jp_2_en_dict.jar depends/sqlite-jdbc-3.7.2.jar depends/rikaichan.jar"/>
             </manifest>
+            <fileset dir="${basedir}/resources">
+                 <include name="jp/**"/>
+            </fileset>
         </jar>
 
        <jar destfile="build/jar/dictionaries/default_jp_2_en_dict.jar">
@@ -27,7 +30,7 @@
 
         <jar destfile="build/jar/depends/rikaichan.jar">
             <fileset dir="${basedir}">
-                 <include name="resources/**"/>
+                 <include name="resources/com/polarcloud/rikaichan/**"/>
             </fileset>
          </jar>
     	
